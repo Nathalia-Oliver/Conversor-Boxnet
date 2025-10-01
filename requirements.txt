@@ -1,0 +1,2 @@
+# requirements.txt
+pandas==1.5.3 # Versão específica do pandas. Você pode usar uma mais recente se preferir (ex: pandas), mas 1.5.3 é estável.

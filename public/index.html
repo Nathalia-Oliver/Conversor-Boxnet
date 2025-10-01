@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOXNET - Conversor CSV ⇄ JSONL</title>
+    <!-- CSS Embutido para simplicidade -->
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+
+        header {
+            background-color: #004c8c; /* Cor principal da BOXNET */
+            color: #fff;
+            padding: 20px 0;
+            width: 100%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Se você tiver um logo da BOXNET, coloque um arquivo boxnet-logo.png na mesma pasta do index.html */
+        /* ou remova esta parte e a tag <img> no HTML */
+        .logo {
+            height: 40px;
+            margin-right: 15px;
+        }
+
+        main {
+            flex-grow: 1;
+            background-color: #fff;
+            padding: 40px;
+            margin: 30px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            max-width: 800px;
+            width: 100%;
+            box-sizing: border-box; /* Garante que padding e border sejam incluídos na largura */
+        }
+
+        h2 {
+            color: #004c8c;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease;
+            margin: 10px;
+            display: inline-block;
+            text-decoration: none;
+            color: #fff;
+        }
+
+        .btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background-color: #5a6268;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background-color: #c82333;
+        }
+
+        .btn-download {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-download:hover:not(:disabled) {
+            background-color: #218838;
+        }
+
+        .upload-area {
+            margin-bottom: 25px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .input-file {
+            display: none;
+        }
+
+        #fileNameDisplay {
+            margin-top: 10px;
+            font-style: italic;
+            color: #555;
+        }
+
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+
+        .message {
+            color: #007bff;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        footer {
+            width: 100%;
+            text-align: center;
+            padding: 20px 0;
+            background-color: #333;
+            color: #eee;
+            margin-top: auto;
+            box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1><img src="boxnet-logo.png" alt="BOXNET Logo" class="logo"> Conversor de Arquivos</h1>
+    </header>
+
+    <main>
+        <section id="login-section">
+            <p>Acesso restrito. Por favor, faça login com sua conta Google BOXNET para continuar.</p>
+            <button id="signInButton" class="btn btn-primary">Entrar com Google</button>
+            <p id="loginError" class="error"></p>
+        </section>
+
+        <section id="app" style="display: none;">
+            <h2>Converter CSV &harr; JSONL</h2>
+            <div class="upload-area">
+                <input type="file" id="fileInput" accept=".csv, .jsonl" class="input-file">
+                <label for="fileInput" class="btn btn-secondary">Escolher Arquivo</label>
+                <span id="fileNameDisplay">Nenhum arquivo selecionado</span>
+            </div>
+            <button id="convertButton" class="btn btn-primary" disabled>Converter</button>
+            <p id="statusMessage" class="message"></p>
+            <a id="downloadLink" class="btn btn-download" style="display: none;" download>Baixar Arquivo Convertido</a>
+            <button id="signOutButton" class="btn btn-danger">Sair</button>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 BOXNET SERVIÇOS DE INFORMAÇÕES LTDA</p>
+    </footer>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+    <!-- JavaScript Embutido para simplicidade -->
+    <script>
+        // main.js - Código JavaScript (substitua os valores abaixo!)
+        // SEU OBJETO DE CONFIGURAÇÃO DO FIREBASE AQUI
+        // Cole o bloco que você copiou do Firebase Console na etapa 3 da Parte 1.
+        // Deve ficar parecido com o exemplo abaixo, mas com seus próprios valores:
+        const firebaseConfig = {
+        apiKey: "AIzaSyCimNxn_XLtcRmsxe218vY4CaNE4ib5YDg",
+        authDomain: "conversor-boxnet.firebaseapp.com",
+        projectId: "conversor-boxnet",
+        storageBucket: "conversor-boxnet.firebasestorage.app",
+        messagingSenderId: "1080870912553",
+        appId: "1:1080870912553:web:8967b3b9825fecfc0e1238"
+ };
+
+        // Inicialize o Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const provider = new firebase.auth.GoogleAuthProvider();
+
+        // Referências aos elementos da UI
+        const signInButton = document.getElementById('signInButton');
+        const signOutButton = document.getElementById('signOutButton');
+        const loginSection = document.getElementById('login-section');
+        const appSection = document.getElementById('app');
+        const loginError = document.getElementById('loginError');
+
+        const fileInput = document.getElementById('fileInput');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const convertButton = document.getElementById('convertButton');
+        const statusMessage = document.getElementById('statusMessage');
+        const downloadLink = document.getElementById('downloadLink');
+
+        // --- Lógica de Autenticação Firebase ---
+        signInButton.addEventListener('click', () => {
+            loginError.textContent = ''; // Limpa erros anteriores
+            auth.signInWithPopup(provider)
+                .catch((error) => {
+                    console.error("Erro de autenticação:", error);
+                    if (error.code === 'auth/popup-closed-by-user') {
+                        loginError.textContent = "O pop-up de login foi fechado. Por favor, tente novamente.";
+                    } else if (error.code === 'auth/unauthorized-domain') {
+                         loginError.textContent = "Seu domínio de e-mail não é autorizado. Por favor, use uma conta Google BOXNET (@boxnet.com.br).";
+                    } else {
+                        loginError.textContent = `Erro ao fazer login: ${error.message}. Por favor, tente novamente.`;
+                    }
+                });
+        });
+
+        signOutButton.addEventListener('click', () => {
+            auth.signOut().then(() => {
+                console.log("Usuário desconectado.");
+                // A UI será atualizada pelo observador de estado de autenticação
+            }).catch((error) => {
+                console.error("Erro ao desconectar:", error);
+                statusMessage.textContent = "Erro ao sair. Por favor, tente novamente.";
+                statusMessage.className = 'error';
+            });
+        });
+
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                // Usuário logado
+                loginSection.style.display = 'none';
+                appSection.style.display = 'block';
+                loginError.textContent = ''; // Limpa qualquer erro anterior
+                statusMessage.textContent = `Bem-vindo(a), ${user.email}!`;
+                statusMessage.className = 'message';
+                console.log("Usuário logado:", user.email);
+            } else {
+                // Usuário deslogado
+                loginSection.style.display = 'block';
+                appSection.style.display = 'none';
+                statusMessage.textContent = '';
+                downloadLink.style.display = 'none';
+                fileInput.value = ''; // Limpa o arquivo selecionado
+                fileNameDisplay.textContent = 'Nenhum arquivo selecionado';
+                convertButton.disabled = true;
+            }
+        });
+
+        // --- Lógica de Upload e Conversão ---
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                fileNameDisplay.textContent = file.name;
+                convertButton.disabled = false;
+                statusMessage.textContent = '';
+                downloadLink.style.display = 'none';
+            } else {
+                fileNameDisplay.textContent = 'Nenhum arquivo selecionado';
+                convertButton.disabled = true;
+            }
+        });
+
+        convertButton.addEventListener('click', async () => {
+            const file = fileInput.files[0];
+            if (!file) {
+                statusMessage.textContent = 'Por favor, selecione um arquivo para converter.';
+                statusMessage.className = 'error';
+                return;
+            }
+
+            statusMessage.textContent = 'Convertendo arquivo... Por favor, aguarde.';
+            statusMessage.className = 'message';
+            convertButton.disabled = true;
+            downloadLink.style.display = 'none';
+
+            try {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    // O conteúdo do arquivo é lido como Data URL (base64)
+                    const fileContentBase64 = e.target.result;
+
+                    // Remove o prefixo "data:type/subtype;base64," para enviar apenas o Base64 puro
+                    const base64Data = fileContentBase64.split(',')[1];
+
+                    // Chama a Netlify Function. O caminho /.netlify/functions/convert_file é padrão.
+                    const response = await fetch('/.netlify/functions/convert_file', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            // Opcional: Se quisesse proteger a função no backend também, enviaria o token do Firebase aqui:
+                            // 'Authorization': `Bearer ${await auth.currentUser.getIdToken()}`
+                        },
+                        body: JSON.stringify({
+                            filename: file.name,
+                            fileContent: base64Data
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.message || `Erro do servidor: ${response.status}`);
+                    }
+
+                    // A função retorna o arquivo convertido em base64
+                    const convertedFileContentBase64 = await response.text();
+                    const convertedFilename = response.headers.get('Content-Disposition').split('filename=')[1].replace(/"/g, '');
+                    const contentType = response.headers.get('Content-Type');
+
+                    // Cria um Blob (objeto de arquivo) e um link para download
+                    const blob = base64toBlob(convertedFileContentBase64, contentType);
+                    const url = URL.createObjectURL(blob);
+
+                    downloadLink.href = url;
+                    downloadLink.download = convertedFilename; // Define o nome do arquivo para download
+                    downloadLink.textContent = `Baixar ${convertedFilename}`;
+                    downloadLink.style.display = 'block';
+
+                    statusMessage.textContent = 'Arquivo convertido com sucesso!';
+                    statusMessage.className = 'message';
+                };
+                reader.readAsDataURL(file); // Lê o arquivo como Data URL (base64)
+
+            } catch (error) {
+                console.error('Erro ao converter arquivo:', error);
+                statusMessage.textContent = `Erro ao converter: ${error.message}`;
+                statusMessage.className = 'error';
+            } finally {
+                convertButton.disabled = false;
+            }
+        });
+
+        // Função auxiliar para converter base64 pura em Blob (arquivo binário)
+        function base64toBlob(base64, contentType) {
+            const byteCharacters = atob(base64); // Decodifica o base64 para uma string de bytes
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers); // Cria um array de bytes
+            return new Blob([byteArray], { type: contentType }); // Cria o Blob
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+[build]
+  publish = "public"         # O Netlify publicará a pasta 'public' como seu site
+  functions = "netlify/functions" # O Netlify procurará por funções na pasta 'netlify/functions'
+
+[functions]
+  python_version = "3.9"     # Especifica a versão do Python para suas funções
+  # Caso você precise de um tempo limite maior para arquivos muito grandes,
+  # pode adicionar: timeout = 30 (limite do plano gratuito é 26 segundos)
